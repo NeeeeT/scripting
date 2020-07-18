@@ -1,25 +1,37 @@
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
+#include <database_easy>
 
 #pragma semicolon 1
 #pragma newdecls required
+
+#define MAX_DATA_EXISTS 20
 
 Database DB = null;
 char DB_name[7] = "rpg_db";
 
 ConVar g_player_hud_x, g_player_hud_y;
 
-public Plugin myinfo = 
-{
+int g_data[MAXPLAYERS+1][MAX_DATA_EXISTS];//處理玩家資料
+
+enum{
+	exp = 0,
+	total_exp,
+	level,
+	gold,
+	cash,
+	online_time,
+}
+
+public Plugin myinfo = {
 	name = "[NMRiH]RPG System",
 	author = "Nailaz", 
 	description = "RPG features for NMRiH, it will be cool I guess.", 
 	version = "1.0"
 };
 
-public void OnPluginStart()
-{
+public void OnPluginStart(){
 	if(DB == null) SQL_DBConnect();
 	
 	RegConsoleCmd("testss", TestMsg);
@@ -30,12 +42,10 @@ public void OnPluginStart()
 	g_player_hud_x = CreateConVar("rpg_pinfo_x", "0.01", "設定玩家個人資訊的x座標");
 	g_player_hud_y = CreateConVar("rpg_pinfo_y", "1.00", "設定玩家個人資訊的y座標");
 }
-public void OnConfigsExecuted() 
-{
+public void OnConfigsExecuted() {
 	if(DB == null) SQL_DBConnect();
 }
-public void OnClientPostAdminCheck(int client)
-{
+public void OnClientPostAdminCheck(int client){
 	if (IsValidClient(client))
 	{
 		char steamid[32], query[1024];
@@ -45,8 +55,7 @@ public void OnClientPostAdminCheck(int client)
 		DB.Query(CheckPlayer_Callback, query, GetClientSerial(client));
 	}
 }
-public void CheckPlayer_Callback(Database db, DBResultSet result, char[] error, any data)
-{
+public void CheckPlayer_Callback(Database db, DBResultSet result, char[] error, any data){
 	if(result == null)
 	{
 		LogError("[%s] Query失敗: %s", DB_name, error);
@@ -121,7 +130,8 @@ public Action TestMsg(int client, int args)
 {
 	SetHudTextParams(g_player_hud_x.FloatValue, g_player_hud_y.FloatValue, 5.0, 255, 0, 0, 255, 0, 5.0, 0.5, 0.5);
 	ShowHudText(client, -1, "This is a test message");
-	PrintToChat(client, "\x04哈囉啊啊 \x02QQ \x03123]");
+	PrintToChat(client, "\x04[RPG]你目前的經驗值: %d", g_data[client][exp]);
+	g_data[client][exp]++;
 	//x04 = x02
 }
 public void SQLConnection_Callback(Database db, char[] error, any data)
