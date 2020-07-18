@@ -34,3 +34,4 @@
 # Compiled plugins / Includes
 *.smx
 *.inc
+include
