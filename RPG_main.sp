@@ -11,13 +11,25 @@
 //char DB_name[] = "rpg_db";
 char sv_prefix[] = "DIGI加速計畫";
 
+//參數設定
 ConVar g_player_hud_x, g_player_hud_y, g_player_hud_r, g_player_hud_g, g_player_hud_b, g_player_hud_a;
 
+
+//變數設定
 bool Infection[MAXPLAYERS+1];
 bool Bleeding[MAXPLAYERS+1];
 bool PlayerInfoToggle[MAXPLAYERS+1];
 
 int g_data[MAXPLAYERS+1][MAX_DATA_EXISTS];//處理玩家資料
+
+//廣告設定
+char loopMsg[][] = {
+	"",
+	"伺服器目前正在測試階段，歡迎對SourceMod有興趣的人加入(模組,插件, etc..)",
+	"控制台輸入phud可以開啟/關閉右下角個人資訊顯示",
+	"歡迎進入Discord群組: https://discord.gg/GTcct6"
+};
+int current_msg = 0;
 
 enum{
 	exp = 0,
@@ -27,6 +39,8 @@ enum{
 	cash,
 	online_time,
 }
+
+Handle PlayerHUDTimers[MAXPLAYERS + 1];
 
 public Plugin myinfo = {
 	name = "[NMRiH] RPG System",
@@ -38,6 +52,7 @@ public Plugin myinfo = {
 public void OnPluginStart(){
 	RegConsoleCmd("testss", TestMsg);
 	RegConsoleCmd("phud", TogglePlayerInfo);
+	//RegConsoleCmd("pmsg", ToggleMsgInfo);
 	
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_death", Event_PlayerDeath);
@@ -51,11 +66,26 @@ public void OnPluginStart(){
 	g_player_hud_a = CreateConVar("rpg_pinfo_a", "255", "設定玩家個人資訊的alpha值");
 	
 	OnStatusTimer();
+	OnMsgTimer();
+}
+public void OnClientPutInServer(int client)
+{
+    //CreateTimer(15.0, WelcomePlayer, GetClientSerial(client)); // You could also use GetClientUserId(client)
 }
 public void OnStatusTimer()
 {
-	for(int Client=1; Client<=MAXPLAYERS; Client++)
+	for(int Client=1; Client <= 8; Client++)
 		CreateTimer(0.5, Event_PlayerStatus, Client, TIMER_REPEAT);
+}
+public void OnMsgTimer()
+{
+	CreateTimer(10.0, Event_LoopMsg, _, TIMER_REPEAT);
+}
+public Action Event_LoopMsg(Handle timer)
+{
+	if (current_msg < sizeof(loopMsg)-1) current_msg++;
+	else current_msg = 1;
+	PrintToChatAll("\x04[廣播]\x03%s", loopMsg[current_msg]);
 }
 public Action Event_PlayerStatus(Handle timer)
 {
@@ -92,8 +122,12 @@ public void Event_PlayerSpawn(Handle event, const char[] name, bool dontBroadcas
 	int Client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if(Infection[Client]) Infection[Client] = false;
 	if(Bleeding[Client]) Bleeding[Client] = false;
+	
+	//PlayerHUDTimers[Client] = null;
+	delete PlayerHUDTimers[Client];
+	
 	PlayerInfoToggle[Client] = true;
-	CreateTimer(0.7, ShowPlayerInfo, Client, TIMER_REPEAT);
+	PlayerHUDTimers[Client] = CreateTimer(0.7, ShowPlayerInfo, Client, TIMER_REPEAT);
 	//PrintToChat(client, "\x03這裡是重生資訊");
 }
 public void Event_PlayerDeath(Handle event, const char[] name, bool dontBroadcast)
@@ -128,9 +162,12 @@ public Action ShowPlayerInfo(Handle Timer, int client)
 		
 	int iStamina = RoundToZero(GetEntPropFloat(client, Prop_Send, "m_flStamina", 0));
 	char status[64];
+	if (Bleeding[client]) Format(status, sizeof(status), "流血");
+	else if (Infection[client]) Format(status, sizeof(status), "感染");
+	else Format(status, sizeof(status), "正常");
 	
 	SetHudTextParams(g_player_hud_x.FloatValue, g_player_hud_y.FloatValue, 0.7, g_player_hud_r.IntValue, g_player_hud_g.IntValue, g_player_hud_b.IntValue, g_player_hud_a.IntValue, 0, 0.3, 0.1, 0.1);
-	ShowHudText(client, -1, "等級: %d | 經驗值: %d/%s\n血量: %d | 體力: %d\n狀態: %s", g_data[client][level], g_data[client][exp], "10", GetClientHealth(client), iStamina, "正常");
+	ShowHudText(client, -1, "等級: %d | 經驗值: %d/%s\n血量: %d | 體力: %d\n狀態: %s", g_data[client][level], g_data[client][exp], "10", GetClientHealth(client), iStamina, status);
 	return Plugin_Continue;
 	//SetEntPropFloat(i, Prop_Send, "m_flStamina", fMaxStamina); set stamina value
 }
