@@ -1,7 +1,7 @@
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
-#include <database_easy>
+#include <database_rpg>
 
 #pragma semicolon 1
 #pragma newdecls required
@@ -9,7 +9,7 @@
 #define MAX_DATA_EXISTS 20
 
 //char DB_name[] = "rpg_db";
-char sv_prefix[] = "DIGI加速計畫";
+char sv_prefix[] = "小世界";
 
 //參數設定
 ConVar g_player_hud_x, g_player_hud_y, g_player_hud_r, g_player_hud_g, g_player_hud_b, g_player_hud_a;
@@ -51,6 +51,8 @@ public Plugin myinfo = {
 
 public void OnPluginStart(){
 	RegConsoleCmd("testss", TestMsg);
+	RegConsoleCmd("savedb", TestSave);
+	RegConsoleCmd("readdb", TestRead);
 	RegConsoleCmd("phud", TogglePlayerInfo);
 	//RegConsoleCmd("pmsg", ToggleMsgInfo);
 	
@@ -79,7 +81,7 @@ public void OnStatusTimer()
 }
 public void OnMsgTimer()
 {
-	CreateTimer(10.0, Event_LoopMsg, _, TIMER_REPEAT);
+	CreateTimer(90.0, Event_LoopMsg, _, TIMER_REPEAT);
 }
 public Action Event_LoopMsg(Handle timer)
 {
@@ -140,7 +142,8 @@ public void Event_PlayerDeath(Handle event, const char[] name, bool dontBroadcas
 public void Event_Killed(Event event, const char[] name, bool dontBroadcast)
 {
 	int killer = event.GetInt("killeridx");
-	Set_User_Exp(killer, Get_User_Exp(killer) + 1);
+	if(1 <= killer <= 8)
+		Set_User_Exp(killer, Get_User_Exp(killer) + 1);
 }
 public Action TestMsg(int client, int args)
 {
@@ -148,6 +151,22 @@ public Action TestMsg(int client, int args)
 	ShowHudText(client, -1, "This is a test message");
 	PrintToChat(client, "\x04[RPG]你目前的經驗值: %d", g_data[client][exp]);
 	g_data[client][exp]++;
+	//x04 = x02
+}
+public Action TestSave(int client, int args)
+{
+	PrintToChat(client, "\x04已儲存資料 -> 等級:%d", g_data[client][level]);
+	SQL_Write("rpg_db", client, "level", g_data[client][level]);
+	//SQL_Write(const String:table[], client, const String:fmt[], any:...);
+	//SQL_Read(const String:table[], client, String:text[], maxlength);
+	//x04 = x02
+}
+public Action TestRead(int client, int args)
+{
+	char x = SQL_Read("rpg_db", client, "level", 50);
+	PrintToChat(client, "\x04已讀取資料 -> 等級:%s", x);
+	//SQL_Write(const String:table[], client, const String:fmt[], any:...);
+	//SQL_Read(const String:table[], client, String:text[], maxlength);
 	//x04 = x02
 }
 public Action TogglePlayerInfo(int client, int args)
@@ -178,7 +197,9 @@ public Action Set_User_Exp(int client, int amount)
 }
 stock int Get_User_Exp(int client)
 {
-	return g_data[client][exp];
+	if(1 <= client <= 8)
+		return g_data[client][exp];
+	return -1;
 }
 stock void CheckLevel(int client)
 {

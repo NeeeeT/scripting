@@ -19,7 +19,8 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 
 public OnPluginStart()
 {
-	dbsi_confname = CreateConVar("dbsi_confname", "rpg_db", "Config name from database.cfg for connect params.");	
+	dbsi_confname = CreateConVar("dbsi_confname", "rpg_db", "Config name from database.cfg for connect params.");
+	//Database Name
 	
 	AutoExecConfig(true);
 	
